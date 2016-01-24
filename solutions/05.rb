@@ -61,8 +61,7 @@ class ObjectStore
       message = "Branch #{current_branch_name} does not have any commits yet."
       ReturnObject.new(false, message)
     else
-      log_message = String.new
-      commits_list.each { |commit| log_message << commit.log_message }
+      log_message = commits_list.map { |commit| commit.log_message }.join
       ReturnObject.new(true, log_message.chomp!.chomp!)
     end
   end
@@ -121,7 +120,7 @@ class ObjectStore
       @current_branch_name = "master"
     end
 
-    attr_reader :current_branch, :branch_list, :current_branch_name
+    attr_reader :current_branch, :branch_list
 
     def create(branch_name)
       if @branch_list.has_key?(branch_name)
@@ -165,6 +164,7 @@ class ObjectStore
           branches_name_list << "  #{key}\n"
         end
       end
+
       ReturnObject.new(true, branches_name_list.chomp!)
     end
 
@@ -191,7 +191,7 @@ class Commit
     @date = Time.now
     @message = message
     @hash = Digest::SHA1.hexdigest "#{format_date}#{message}"
-    @objects_hash = new_objects.clone
+    @objects_hash = new_objects.dup
   end
 
   attr_reader :date, :message, :hash, :objects_hash
@@ -213,10 +213,7 @@ class ReturnObject
   def initialize(success, message, result = nil)
     @message = message
     @success = success
-
-    unless result == nil
-      @result = result
-    end
+    @result = result
   end
 
   attr_reader :message, :result
