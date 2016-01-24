@@ -7,7 +7,6 @@ class ObjectStore
 
   def initialize(&block)
     @repo_branch_group = BranchGroup.new
-    @current_branch = @repo_branch_group.current_branch
 
     if block_given?
       instance_eval &block
@@ -25,13 +24,12 @@ class ObjectStore
 
   def commit(message)
     if to_be_committed != last_committed_objects
-      new_commit = Commit.new(message, to_be_committed)
       count = (last_committed_objects.size - to_be_committed.size).abs
 
-      commits_list.insert(0, new_commit)
-      @current_branch.head = new_commit
+      commits_list.insert(0, Commit.new(message, to_be_committed))
+      current_branch.head = commits_list.first
       return_message = "#{message}\n\t#{count} objects changed"
-      ReturnObject.new(true, return_message, new_commit)
+      ReturnObject.new(true, return_message, commits_list.first)
     else
       ReturnObject.new(false, "Nothing to commit, working directory clean.")
     end
@@ -51,10 +49,10 @@ class ObjectStore
     if found_commit.nil?
       ReturnObject.new(false, "Commit #{commit_hash} does not exist.")
     else
-      @current_branch.head = found_commit
+      current_branch.head = found_commit
       commits_list.drop_while { |commit| commit != found_commit }
       message = "HEAD is now at #{commit_hash}."
-      ReturnObject.new(true, message, @current_branch.head)
+      ReturnObject.new(true, message, current_branch.head)
     end
   end
 
@@ -74,8 +72,8 @@ class ObjectStore
       message = "Branch #{current_branch_name} does not have any commits yet."
       ReturnObject.new(false, message)
     else
-      message = @current_branch.head.message
-      ReturnObject.new(true, message, @current_branch.head)
+      message = @repo_branch_group.current_branch.head.message
+      ReturnObject.new(true, message, @repo_branch_group.current_branch.head)
     end
   end
 
@@ -95,19 +93,23 @@ class ObjectStore
   end
 
   def to_be_committed
-    @current_branch.to_be_committed
+    current_branch.to_be_committed
   end
 
   def commits_list
-    @current_branch.commits_list
+    current_branch.commits_list
+  end
+
+  def current_branch
+    @repo_branch_group.current_branch
   end
 
   def branch_list
-     @repo_branch_group.branch_list
+    @repo_branch_group.branch_list
   end
 
   def current_branch_name
-    branch_list.key(@current_branch)
+    branch_list.key(current_branch)
   end
 
   class BranchGroup
@@ -119,7 +121,7 @@ class ObjectStore
       @current_branch_name = "master"
     end
 
-    attr_reader :current_branch, :branch_list
+    attr_reader :current_branch, :branch_list, :current_branch_name
 
     def create(branch_name)
       if @branch_list.has_key?(branch_name)
@@ -134,6 +136,7 @@ class ObjectStore
     def checkout(branch_name)
       if @branch_list.has_key?(branch_name)
         @current_branch = @branch_list[branch_name]
+        @current_branch_name = branch_name
         ReturnObject.new(true, "Switched to branch #{branch_name}.")
       else
         ReturnObject.new(false, "Branch #{branch_name} does not exist.")
@@ -166,19 +169,19 @@ class ObjectStore
     end
 
     class Branch
+      attr_accessor :head, :commits_list, :to_be_committed
+
       def initialize(copy_branch = nil)
         if copy_branch.nil?
           @commits_list = Array.new
           @to_be_committed = Hash.new
           @head = nil
         else
-          @commits_list = copy_branch.commits_list
-          @to_be_committed = copy_branch.to_be_committed
-          @head = copy_branch.head
+          @commits_list = copy_branch.commits_list.dup
+          @to_be_committed = copy_branch.to_be_committed.dup
+          @head = copy_branch.head.dup if copy_branch.head
         end
       end
-
-      attr_accessor :head, :commits_list, :to_be_committed
     end
   end
 end
@@ -187,7 +190,7 @@ class Commit
   def initialize(message, new_objects)
     @date = Time.now
     @message = message
-    @hash = Digest::SHA1.hexdigest(date.to_s + message)
+    @hash = Digest::SHA1.hexdigest "#{format_date}#{message}"
     @objects_hash = new_objects.clone
   end
 
@@ -197,9 +200,12 @@ class Commit
     @objects_hash.values
   end
 
+  def format_date
+    @date.strftime('%a %b %-d %H:%M %Y %z')
+  end
+
   def log_message
-    correct_date_format = date.strftime('%a %b %-d %H:%M %Y %z')
-    "Commit #{hash}\nDate: #{correct_date_format}\n\n\t#{message}\n\n"
+    "Commit #{hash}\nDate: #{format_date}\n\n\t#{message}\n\n"
   end
 end
 
