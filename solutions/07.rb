@@ -91,23 +91,15 @@ class LazyMode
     end
 
     def body(*note_content)
-      if note_content.length == 1
-        @body = note_content.first
-      else
-        @body
-      end
+      note_content.size == 1 ? @body = note_content.first : @body
     end
 
     def status(*symbols)
-      if symbols.length == 1
-        @status = symbols.first
-      else
-        @status
-      end
+      symbols.size == 1 ? @status = symbols.first : @status
     end
 
     def scheduled(*date)
-      if date.length == 1
+      if date.size == 1
         @scheduled = LazyMode::Date.new(date.first).to_s
       else
         @scheduled
