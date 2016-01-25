@@ -122,7 +122,6 @@ class LazyMode
         @header, @body = note.header, note.body
         @status = note.status
         @tags = note.tags
-        @notes = note.notes
         @date = date
       end
     end
