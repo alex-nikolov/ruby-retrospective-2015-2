@@ -10,10 +10,14 @@ class LazyMode
     attr_accessor :year, :month, :day
 
     def initialize(date)
-      @date = date
       @year, @month, @day = date.split(' ').first.split('-').map(&:to_i)
 
-      format_date
+      repeat_period = date.split(' ').last
+      formated_date = sprintf('%.4d-%.2d-%.2d', @year, @month, @day)
+      no_repeat_period = repeat_period == date
+
+      @date = formated_date
+      @date << ' ' << repeat_period unless no_repeat_period
     end
 
     def to_s
@@ -29,26 +33,39 @@ class LazyMode
       days_difference > 0 and days_difference % cycle_period == 0
     end
 
-    def match_day_of_week(date)
-      old_total_days = LazyMode::Date.new(date).total_days
-      equal_day = (total_days..total_days + 6).find { |d| d == old_total_days }
-      return equal_day if date.size == 10
+    def match_days_of_week(date)
+      old_days = LazyMode::Date.new(date).total_days
+      equal_day = (total_days..total_days + 6).find { |d| d == old_days }
 
+      return [equal_day] if date.size == 10 and equal_day
+      return nil if date.size == 10
+
+      match_multiple_days_of_week(date)
+    end
+
+    def match_multiple_days_of_week(date)
+      old_days = LazyMode::Date.new(date).total_days
       cycle_period = cycle_period_to_days(date)
-      (total_days..total_days + 6).find do |days|
-        days % cycle_period == old_total_days % cycle_period
+
+      matching_days = (total_days..total_days + 6).find_all do |days|
+        days >= old_days and days % cycle_period == old_days % cycle_period
       end
+
+      matching_days == [] ? nil : matching_days
     end
 
     def self.total_days_to_s(total_days)
-      days_to_s = (total_days / 360).to_s << '-'
-      days_to_s << ((total_days % 360 / 30) + 1).to_s << "-"
-      days_to_s << (total_days % 30).to_s
-      Date.new(days_to_s).to_s
+      years_months_days = []
+      years_months_days[0] = total_days / 360
+      years_months_days[1] = total_days % 360 / 30 + 1
+      years_months_days[2] = total_days % 30
+
+      Date.new(years_months_days.join('-')).to_s
     end
 
     def cycle_period_to_days(date)
       cycle_period = date[11..-2].to_i
+
       case date[-1]
         when 'w' then cycle_period *= 7
         when 'm' then cycle_period *= 30
@@ -58,17 +75,6 @@ class LazyMode
 
     def total_days
       @year * 360 + (@month - 1) * 30 + @day
-    end
-
-    private
-
-    def format_date
-      repeat_period = @date.split(' ').last
-      formated_date = sprintf('%.4d-%.2d-%.2d', @year, @month, @day)
-      no_repeat_period = repeat_period == @date
-
-      @date = formated_date
-      @date << ' ' << repeat_period unless no_repeat_period
     end
   end
 
@@ -162,14 +168,27 @@ class LazyMode
     end
 
     def weekly_agenda(date)
-      date_within_week = -> (note) { date.match_day_of_week(note.scheduled) }
-      scheduled_notes = @notes.select &date_within_week
+      date_within_week = -> (note) { date.match_days_of_week(note.scheduled) }
+      notes_at_least_once_within_week = @notes.select &date_within_week
 
-      new_agenda_note = -> (note) do
-        match_days = date.match_day_of_week(note.scheduled)
-        Note::AgendaNote.new(note, Date.new(Date.total_days_to_s(match_days)))
+      Agenda.new(all_notes_within_week(notes_at_least_once_within_week, date))
+    end
+
+    private
+
+    def all_notes_within_week(notes_at_least_once_within_week, date)
+      new_agenda_notes = -> (note) do
+        match_days = date.match_days_of_week(note.scheduled)
+        map_match_days_to_agenda_notes(note, match_days)
       end
-      Agenda.new(scheduled_notes.map &new_agenda_note)
+
+      notes_at_least_once_within_week.flat_map &new_agenda_notes
+    end
+
+    def map_match_days_to_agenda_notes(note, match_days)
+      match_days.map do |day|
+        Note::AgendaNote.new(note, Date.new(Date.total_days_to_s(day)))
+      end
     end
 
     class Agenda < File
@@ -179,7 +198,7 @@ class LazyMode
 
       def where(tag: nil, text: nil, status: nil)
         filtered = Array.new
-        #Тук трябваше да е arity, но sceptic не го прие като английска дума
+
         a = nil_to_i(tag) + nil_to_i(text) + nil_to_i(status)
 
         filtered = filter_tag(filtered, tag: tag)
