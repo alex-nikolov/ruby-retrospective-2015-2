@@ -119,7 +119,8 @@ class LazyMode
 
       def initialize(note, date)
         @file_name = note.file_name
-        @header, @body = note.header, note.body
+        @header = note.header
+        @body = note.body
         @status = note.status
         @tags = note.tags
         @date = date

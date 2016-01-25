@@ -4,7 +4,7 @@ class Spreadsheet
   def initialize(table = nil)
     @table = Array.new
 
-    @table = Parser.parse_table(table) unless /\A\s*\Z/.match table
+    @table = Parser.parse_table(table) unless table.nil? or table == ''
   end
 
   def empty?
@@ -27,8 +27,8 @@ class Spreadsheet
 
     if raw_cell != nil and raw_cell[0] == '='
       Error.new.unknown_function_error(raw_cell)
-      Error.new.invalid_expression_error(raw_cell)
       Error.new.argument_number_error(raw_cell)
+      Error.new.invalid_expression_error(raw_cell)
     end
 
     evaluate_cell_data(raw_cell)
@@ -75,7 +75,9 @@ class Spreadsheet
 
   class Error < Exception
     def unknown_function_error(formula)
-      function_name = /=(.*)\(/.match formula
+      function_name = /=(.*)\(.*\)/.match formula
+
+      return unless function_name
 
       if Parser::FORMULA_TO_METHOD[function_name[1]].nil?
         raise Spreadsheet::Error, "Unknown function '#{function_name[1]}'"
@@ -84,6 +86,7 @@ class Spreadsheet
 
     def invalid_expression_error(formula)
       expression = formula[1..-1]
+
       number = Parser::NUMBER
       cell = Parser::CELL
       at_least_one = "(((#{number}|#{cell})(\s*,\s*))*(#{number}|#{cell}))"
@@ -95,17 +98,27 @@ class Spreadsheet
 
     def argument_number_error(formula)
       function_name = /=(.*)\(/.match formula
-      argument_size = (/\((.*)\)/.match formula).to_s.split(',').size
+      arguments = (/\((.*)\)/.match formula).to_s.split(',')
+      arguments_size = arguments == ["()"] ? 0 : arguments.size
 
-      case function_name[1]
-        when 'ADD', 'MULTIPLY' then argument_size_error('<', argument_size)
-        when 'SUBSTRACT', 'MOD', 'DIVIDE'
-          argument_size_error('!=', argument_size)
+      return unless function_name
+
+      check_for_argument_number_error(function_name[1], arguments_size)
+    end
+
+    private
+
+    def check_for_argument_number_error(function_name, argument_size)
+      case function_name
+        when 'ADD', 'MULTIPLY'
+          argument_size_error('<', argument_size, function_name)
+        when 'SUBTRACT', 'MOD', 'DIVIDE'
+          argument_size_error('!=', argument_size, function_name)
       end
     end
 
-    def argument_size_error(operation, argument_size)
-      message_start = "Wrong number of arguments for 'FOO': "
+    def argument_size_error(operation, argument_size, function_name)
+      message_start = "Wrong number of arguments for '#{function_name}': "
       error_condition = operation.to_sym.to_proc.call(argument_size, 2)
 
       case operation
@@ -126,14 +139,14 @@ class Spreadsheet
 
     ADD = /\A=ADD\(#{MULTIPLE_ARGUMENTS}\)\Z/
     MULTIPLY = /\A=MULTIPLY\(#{MULTIPLE_ARGUMENTS}\)\Z/
-    SUBSTRACT = /\A=SUBSTRACT\(#{TWO_ARGUMENTS}\)\Z/
+    SUBTRACT = /\A=SUBTRACT\(#{TWO_ARGUMENTS}\)\Z/
     DIVIDE = /\A=DIVIDE\(#{TWO_ARGUMENTS}\)\Z/
     MOD = /\A=MOD\(#{TWO_ARGUMENTS}\)\Z/
 
-    FORMULA = /(#{ADD}|#{MULTIPLY}|#{SUBSTRACT}|#{DIVIDE}|#{MOD})/
+    FORMULA = /(#{ADD}|#{MULTIPLY}|#{SUBTRACT}|#{DIVIDE}|#{MOD})/
 
     FORMULA_TO_METHOD = { 'ADD' => '+'.to_sym, 'MULTIPLY' => '*'.to_sym,
-                          'SUBSTRACT' => '-'.to_sym, 'DIVIDE' => '/'.to_sym,
+                          'SUBTRACT' => '-'.to_sym, 'DIVIDE' => '/'.to_sym,
                           'MOD' => '%'.to_sym,
                         }
 
