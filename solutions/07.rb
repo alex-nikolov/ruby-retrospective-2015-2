@@ -122,12 +122,6 @@ class LazyMode
       @notes += new_note.notes if new_note.notes.size > 0
     end
 
-    def scheduled_date_in_week(date)
-      (@total_days...@total_days + 7).find do |days|
-        days % cycle_period == old_total_days % cycle_period
-      end
-    end
-
     class AgendaNote < Note
       attr_reader :date
 
