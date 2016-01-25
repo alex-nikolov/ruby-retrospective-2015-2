@@ -97,22 +97,20 @@ class TurtleGraphics
       end
 
       def convert_canvas(default_canvas)
-        limit_gaps = @allowed_symbols.size - 1
+        maximum_steps = default_canvas.maximum_steps
 
-        to_symbols = -> (symbol, index) { [index.to_f / limit_gaps, symbol] }
-        intensity_to_symbol = @allowed_symbols.map.with_index &to_symbols
-
-        intensity_canvas = convert_to_intensity(default_canvas)
-        symbol_canvas = convert_to_symbols(intensity_canvas, intensity_to_symbol)
-        symbol_canvas.reduce("") { |memo, row| memo + row.join + "\n" }.chomp
+        default_canvas.canvas.map do |row|
+          row.map do |steps|
+            steps_to_symbol(steps, maximum_steps)
+          end.join
+        end.join("\n")
       end
 
-      def convert_to_symbols(intensity_canvas, intensity_to_symbol)
-        to_symbol = -> (intensity) do
-          intensity_to_symbol.find { |pair| pair.first >= intensity }.last
-        end
-        row_to_symbols = -> (row) { row.map &to_symbol }
-        intensity_canvas.map &row_to_symbols
+      def steps_to_symbol(steps, maximum_steps)
+        intensity = steps.to_f / maximum_steps
+        corresponding_symbol_index = (intensity * (@allowed_symbols.size - 1)).ceil
+
+        @allowed_symbols[corresponding_symbol_index]
       end
     end
 
