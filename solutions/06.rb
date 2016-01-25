@@ -5,7 +5,7 @@ class TurtleGraphics
       [:left, [0, -1]],
       [:down, [1, 0]],
       [:right, [0, 1]],
-    ]
+    ].freeze
 
     def initialize(rows, columns)
       @rows, @columns = rows, columns
@@ -17,6 +17,7 @@ class TurtleGraphics
     def spawn_at(row, column)
       @x = row
       @y = column
+
       if [row, column] != [0, 0]
         @canvas.remove_steps_at(0, 0)
         @canvas.increment_value(row, column)
