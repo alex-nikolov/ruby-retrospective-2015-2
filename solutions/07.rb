@@ -191,39 +191,29 @@ class LazyMode
       end
 
       def where(tag: nil, text: nil, status: nil)
-        filtered = Array.new
+        filtered_notes = @notes.dup
 
-        a = nil_to_i(tag) + nil_to_i(text) + nil_to_i(status)
+        filter_by_tag(filtered_notes, tag) if tag
+        filter_by_status(filtered_notes, status) if status
+        filter_by_text(filtered_notes, text) if text
 
-        filtered = filter_tag(filtered, tag: tag)
-        filtered = filter_text(filtered, text: text)
-        filtered = filter_status(filtered, status: status)
-
-        Agenda.new(filtered.select { |n| filtered.count(n) == a }.uniq)
+        Agenda.new(filtered_notes)
       end
 
       private
 
-      def nil_to_i(argument)
-        argument == nil ? 0 : 1
+      def filter_by_tag(filtered_notes, tag)
+        filtered_notes.select! { |note| note.tags.include?(tag) }
       end
 
-      def filter_tag(filtered, tag: nil)
-        filter_note_tag = -> (n) { n.tags.include? tag }
-        filtered += @notes.select &filter_note_tag if tag
-        filtered
+      def filter_by_text(filtered_notes, text)
+        filtered_notes.select! do |note|
+          text.match(note.header) or text.match(note.body)
+        end
       end
 
-      def filter_text(filtered, text: nil)
-        filter_note_text = -> (n) { text.match n.header or text.match n.body }
-        filtered += @notes.select &filter_note_text if text
-        filtered
-      end
-
-      def filter_status(filtered, status: nil)
-        filter_note_status = -> (n) { n.status == status }
-        filtered += @notes.select &filter_note_status if status
-        filtered
+      def filter_by_status(filtered_notes, status)
+        filtered_notes.select! { |note| note.status == status }
       end
     end
   end
