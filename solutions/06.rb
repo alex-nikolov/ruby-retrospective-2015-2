@@ -81,17 +81,7 @@ class TurtleGraphics
       end
     end
 
-    module Intensity
-      def convert_to_intensity(default_canvas)
-        maximum_steps = default_canvas.maximum_steps
-        row_to_intensity = -> (r) { r.map { |steps| steps.to_f / maximum_steps } }
-        default_canvas.canvas.map &row_to_intensity
-      end
-    end
-
     class ASCII
-      include Intensity
-
       def initialize(allowed_symbols)
         @allowed_symbols = allowed_symbols
       end
@@ -106,6 +96,8 @@ class TurtleGraphics
         end.join("\n")
       end
 
+      private
+
       def steps_to_symbol(steps, maximum_steps)
         intensity = steps.to_f / maximum_steps
         corresponding_symbol_index = (intensity * (@allowed_symbols.size - 1)).ceil
@@ -115,8 +107,6 @@ class TurtleGraphics
     end
 
     class HTML
-      include Intensity
-
       def initialize(pixel_size)
         @pixel_size = pixel_size
       end
@@ -135,18 +125,25 @@ class TurtleGraphics
       def html_body(default_canvas)
         body_start = "<body><table>"
         body_end = "</table></body></html>"
-        body_mid = String.new
-        convert_to_intensity(default_canvas).each do |row|
-          body_mid << "<tr>"
-          row.each { |intensity| body_mid << html_opacity(intensity) }
-          body_mid << "</tr>"
-        end
+
+        body_mid = convert_to_intensity(default_canvas).map do |row|
+          "<tr>" + row.map { |intensity| html_opacity(intensity) }.join + "</tr>"
+        end.join
+
         body_start + body_mid + body_end
       end
+
+      private
 
       def html_opacity(intensity)
         quotes = '"'
         "<td style=#{quotes}opacity: #{format('%.2f', intensity)}#{quotes}></td>"
+      end
+
+      def convert_to_intensity(default_canvas)
+        maximum_steps = default_canvas.maximum_steps
+        row_to_intensity = -> (r) { r.map { |steps| steps.to_f / maximum_steps } }
+        default_canvas.canvas.map &row_to_intensity
       end
     end
   end
