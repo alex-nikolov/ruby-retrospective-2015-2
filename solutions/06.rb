@@ -1,15 +1,13 @@
 class TurtleGraphics
   class Turtle
-    ORIENTATIONS = [
-      [:up, [-1, 0]],
-      [:left, [0, -1]],
-      [:down, [1, 0]],
-      [:right, [0, 1]],
-    ].freeze
+    ORIENTATIONS = [:up, :left, :down, :right].freeze
+    MOVE_OFFSET = [[-1, 0], [0, -1], [1, 0], [0, 1]].freeze
 
     def initialize(rows, columns)
-      @rows, @columns = rows, columns
-      @x, @y = 0, 0
+      @rows = rows
+      @columns = columns
+      @x = 0
+      @y = 0
       @orientation = :right
       @canvas = Canvas::Default.new(rows, columns)
     end
@@ -28,16 +26,10 @@ class TurtleGraphics
       @x += move_offset.first
       @y += move_offset.last
 
-      correct_out_of_bounds_coordinates(@x, @y)
+      @x = @x % @rows
+      @y = @y % @columns
+
       @canvas.increment_value(@x, @y)
-    end
-
-    def turn_left
-      turn 1
-    end
-
-    def turn_right
-      turn -1
     end
 
     def draw(given_canvas = @canvas, &block)
@@ -50,22 +42,18 @@ class TurtleGraphics
       @orientation = orientation
     end
 
+    def turn_left
+      @orientation = ORIENTATIONS[(ORIENTATIONS.find_index(@orientation) + 1) % 4]
+    end
+
+    def turn_right
+      @orientation = ORIENTATIONS[(ORIENTATIONS.find_index(@orientation) - 1) % 4]
+    end
+
     private
 
-    def turn(direction)
-      orientation_index = ORIENTATIONS.index { |pair| pair.first == @orientation }
-      changed_orientation = ORIENTATIONS[(orientation_index + direction) % 4]
-
-      @orientation = changed_orientation.first
-    end
-
     def move_offset
-      ORIENTATIONS.find { |pair| @orientation == pair.first }.last
-    end
-
-    def correct_out_of_bounds_coordinates(x, y)
-      @x = x % @rows
-      @y = y % @columns
+      MOVE_OFFSET[ORIENTATIONS.find_index(@orientation)]
     end
   end
 
