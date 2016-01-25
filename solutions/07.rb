@@ -11,11 +11,9 @@ class LazyMode
 
     def initialize(date)
       @date = date
-      format_date
+      @year, @month, @day = date.split(' ').first.split('-').map(&:to_i)
 
-      @year = @date[0..3].to_i
-      @month = @date[5..6].to_i
-      @day = @date[8..9].to_i
+      format_date
     end
 
     def to_s
@@ -64,11 +62,12 @@ class LazyMode
     private
 
     def format_date
-      year_month_day = @date.split(/-| /)
+      repeat_period = @date.split(' ').last
+      formated_date = sprintf('%.4d-%.2d-%.2d', @year, @month, @day)
+      no_repeat_period = repeat_period == @date
 
-      (4 - year_month_day[0].length).times { @date.insert(0, '0') }
-      (2 - year_month_day[1].length).times { @date.insert(5, '0') }
-      (2 - year_month_day[2].length).times { @date.insert(8, '0') }
+      @date = formated_date
+      @date << ' ' << repeat_period unless no_repeat_period
     end
   end
 
