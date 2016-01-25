@@ -25,7 +25,8 @@ class LazyMode
       return total_days == old_total_days if date.length == 10
 
       cycle_period = cycle_period_to_days(date)
-      (total_days - old_total_days) % cycle_period == 0
+      days_difference = total_days - old_total_days
+      days_difference > 0 and days_difference % cycle_period == 0
     end
 
     def match_day_of_week(date)
