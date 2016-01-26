@@ -184,45 +184,45 @@ class ObjectStore
       end
     end
   end
-end
 
-class Commit
-  def initialize(message, new_objects)
-    @date = Time.now
-    @message = message
-    @hash = Digest::SHA1.hexdigest "#{format_date}#{message}"
-    @objects_hash = new_objects.dup
+  class Commit
+    def initialize(message, new_objects)
+      @date = Time.now
+      @message = message
+      @hash = Digest::SHA1.hexdigest "#{format_date}#{message}"
+      @objects_hash = new_objects.dup
+    end
+
+    attr_reader :date, :message, :hash, :objects_hash
+
+    def objects
+      @objects_hash.values
+    end
+
+    def format_date
+      @date.strftime('%a %b %-d %H:%M %Y %z')
+    end
+
+    def log_message
+      "Commit #{hash}\nDate: #{format_date}\n\n\t#{message}\n\n"
+    end
   end
 
-  attr_reader :date, :message, :hash, :objects_hash
+  class ReturnObject
+    def initialize(success, message, result = nil)
+      @message = message
+      @success = success
+      @result = result
+    end
 
-  def objects
-    @objects_hash.values
-  end
+    attr_reader :message, :result
 
-  def format_date
-    @date.strftime('%a %b %-d %H:%M %Y %z')
-  end
+    def success?
+      @success
+    end
 
-  def log_message
-    "Commit #{hash}\nDate: #{format_date}\n\n\t#{message}\n\n"
-  end
-end
-
-class ReturnObject
-  def initialize(success, message, result = nil)
-    @message = message
-    @success = success
-    @result = result
-  end
-
-  attr_reader :message, :result
-
-  def success?
-    @success
-  end
-
-  def error?
-    not @success
+    def error?
+      not @success
+    end
   end
 end
