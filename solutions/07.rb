@@ -7,7 +7,7 @@ class LazyMode
   end
 
   class Date
-    attr_accessor :year, :month, :day
+    attr_reader :year, :month, :day
 
     def initialize(date)
       @year, @month, @day = date.split(' ').first.split('-').map(&:to_i)
@@ -26,7 +26,7 @@ class LazyMode
 
     def match_date?(date)
       old_total_days = LazyMode::Date.new(date).total_days
-      return total_days == old_total_days if date.length == 10
+      return total_days == old_total_days if date.size == 10
 
       cycle_period = cycle_period_to_days(date)
       days_difference = total_days - old_total_days
@@ -63,6 +63,12 @@ class LazyMode
       Date.new(years_months_days.join('-')).to_s
     end
 
+    def total_days
+      @year * 360 + (@month - 1) * 30 + @day
+    end
+
+    private
+
     def cycle_period_to_days(date)
       cycle_period = date[11..-2].to_i
 
@@ -72,14 +78,10 @@ class LazyMode
       end
       cycle_period
     end
-
-    def total_days
-      @year * 360 + (@month - 1) * 30 + @day
-    end
   end
 
   class Note
-    attr_accessor :header, :file_name, :tags, :notes
+    attr_reader :header, :file_name, :tags, :notes
 
     def initialize(file_name, header, *tags)
       @file_name = file_name
