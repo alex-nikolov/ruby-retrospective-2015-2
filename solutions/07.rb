@@ -70,7 +70,7 @@ class LazyMode
     private
 
     def cycle_period_to_days(date)
-      cycle_period = date[11..-2].to_i
+      cycle_period = date.split('+').last.to_i
 
       case date[-1]
         when 'w' then cycle_period *= 7
